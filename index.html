@@ -65,6 +65,16 @@
             height: auto; /* Maintain the image's aspect ratio */
             z-index: -2;
         }
+
+        #gameTitle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            font-family: 'Arial', sans-serif;
+            z-index: 100;
+        }
     </style>
 </head>
 <body onmousedown="handleTouchStart(event)" ontouchstart="handleTouchStart(event)" onmousemove="handleTouchMove(event)" ontouchmove="handleTouchMove(event)" onmouseup="handleTouchEnd(event)" ontouchend="handleTouchEnd(event)">
@@ -75,7 +85,15 @@
 <div class="stars" id="stars-container"></div>
 
 <!-- Image at the bottom -->
-<img src="https://www.bing.com/images/blob?bcid=SG9QOdWDNp8Gh0Bb1wpJI1BpNdzV......4" alt="Background Image" id="backgroundImage">
+<img src="https://cdn.discordapp.com/attachments/1194326260025921637/1204469930284814337/88e422be-544d-464a-85d1-b2c80b43a2dc3.png?ex=65d4d909&is=65c26409&hm=bd26e0f541f2a08c2ca6d27cb7bd547320108c789d782b00045806c046dcbf58&" alt="Background Image" id="backgroundImage">
+
+<!-- Sound elements -->
+<audio id="enemyShotSound" src="https://cdn.discordapp.com/attachments/1165670330812084308/1203382990877622272/GMNS_Laser_-_Player.mp3?ex=65d0e4be&is=65be6fbe&hm=64aebdb35a0b0b93403d7dc9c351814121b951280a0b96b2599caa76570e3a06&"></audio>
+<audio id="userShotSound" src="https://cdn.discordapp.com/attachments/1165670330812084308/1203382990877622272/GMNS_Laser_-_Player.mp3?ex=65d0e4be&is=65be6fbe&hm=64aebdb35a0b0b93403d7dc9c351814121b951280a0b96b2599caa76570e3a06&"></audio>
+<audio id="backgroundMusic" src="https://cdn.discordapp.com/attachments/1165670330812084308/1203383053687324672/GMNS_-_Ambience_Music.mp3?ex=65d0e4cd&is=65be6fcd&hm=57b841ea941c35386d5b09c3e55e3f9a30f0a6917974a69d25e72500b79888f7&" autoplay loop></audio>
+<audio id="explosionSound" src="https://cdn.discordapp.com/attachments/1165670330812084308/1203382990529368094/GMNS_Explosion.mp3?ex=65d0e4be&is=65be6fbe&hm=2065e80ad9ec266ad4ad3ede5aa81dd8c86eb6802b38b7292c440f3eaac79397&"></audio>
+
+<div id="gameTitle">Galactic Mayhem: Neon Skies</div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
@@ -115,14 +133,14 @@
 
     // Load spaceship image
     const spaceshipImage = new Image();
-    spaceshipImage.src = 'https://th.bing.com/th/id/OIG1.k39dnrc3US0gbeGXzAMC?pid=ImgGn'; // Replace with the actual path to your image
+    spaceshipImage.src = 'https://cdn.discordapp.com/attachments/1194326260025921637/1204469842636308500/6756be92-6ef5-483b-a8ca-08f6fc4f3f32.png?ex=65d4d8f4&is=65c263f4&hm=671892745efa35ee64d2184adf5ba6cefdcbb6e9cb7f6bc31f1e705b5ce96647&'; // Replace with the actual path to your image
 
     // Enemy spaceships
     const enemies = [];
 
     // Load enemy spaceship image
     const enemyImage = new Image();
-    enemyImage.src = 'https://www.bing.com/images/blob?bcid=SB7YmpWrFp8Gh0Bb1wpJI1BpNdzV......s'; // Replace with the actual path to your image
+    enemyImage.src = 'https://cdn.discordapp.com/attachments/1194326260025921637/1204469888224202792/Screenshot_2024-02-01_072645.png?ex=65d4d8ff&is=65c263ff&hm=4ac5b87af402e08e552e3c889c49f640283bc064bbd14b77bb7121162cd627fd&'; // Replace with the actual path to your image
 
     // Enemy bullets
     const enemyBullets = [];
@@ -140,41 +158,30 @@
     // Game state
     let isPaused = false;
 
-    function handleTouchStart(event) {
-        touchStartX = event.clientX || event.touches[0].clientX;
-        touchStartY = event.clientY || event.touches[0].clientY;
+    // Enemy spaceships movement
+    function moveEnemySpaceships() {
+        enemies.forEach(enemy => {
+            enemy.x += enemy.speedX;
+            enemy.y += enemy.speedY;
+
+            if (enemy.x < 0 || enemy.x > canvas.width - enemy.size) {
+                enemy.speedX *= -1; // Change direction when hitting the canvas borders
+            }
+
+            if (enemy.y > canvas.height) {
+                // Reset enemy when it goes below the canvas
+                enemy.y = 0;
+                enemy.x = Math.random() * canvas.width;
+            }
+        });
     }
 
-    function handleTouchMove(event) {
-        event.preventDefault();
-    }
+    function updateEnemies() {
+        moveEnemySpaceships();
 
-    function handleTouchEnd(event) {
-        const touchEndX = event.clientX || event.changedTouches[0].clientX;
-        const touchEndY = event.clientY || event.changedTouches[0].clientY;
-
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-
-        // Check if it's a horizontal swipe (move spaceship)
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            if (!isPaused) {
-                if (deltaX > 0 && spaceship.x < canvas.width - spaceship.size) {
-                    spaceship.x += spaceship.speed;
-                } else if (deltaX < 0 && spaceship.x > 0) {
-                    spaceship.x -= spaceship.speed;
-                }
-            }
-        }
-        // Check if it's a vertical swipe (shoot) or pause
-        else {
-            if (deltaX === 0 && deltaY === 0) {
-                // Tap without swiping, consider it as a pause/unpause
-                isPaused = !isPaused;
-            } else if (!isPaused) {
-                shoot();
-            }
-        }
+        enemies.forEach(enemy => {
+            // Other existing code for updating enemies
+        });
     }
 
     function drawSpaceship() {
@@ -191,6 +198,8 @@
     }
 
     function drawEnemies() {
+        updateEnemies();
+
         enemies.forEach(enemy => {
             // Draw enemy aura
             ctx.beginPath();
@@ -214,6 +223,9 @@
                     y: enemy.y + enemy.size / 2,
                     speed: 5,
                 });
+
+                // Play enemy shot sound
+                document.getElementById('enemyShotSound').play();
             }
         });
     }
@@ -234,6 +246,10 @@
                 spaceship.x -= spaceship.speed;
             } else if (event.key === 'ArrowRight' && spaceship.x < canvas.width) {
                 spaceship.x += spaceship.speed;
+            } else if (event.key === 'ArrowUp' && spaceship.y > 0) {
+                spaceship.y -= spaceship.speed;
+            } else if (event.key === 'ArrowDown' && spaceship.y < canvas.height - spaceship.size) {
+                spaceship.y += spaceship.speed;
             }
         }
     }
@@ -244,6 +260,9 @@
             y: spaceship.y - 25,
             speed: 8,
         });
+
+        // Play user shot sound
+        document.getElementById('userShotSound').play();
     }
 
     function update() {
@@ -265,6 +284,8 @@
                     enemy.y - enemy.size / 2 < spaceship.y + spaceship.size / 2 &&
                     enemy.y + enemy.size / 2 > spaceship.y - spaceship.size / 2
                 ) {
+                    // Play explosion sound
+                    document.getElementById('explosionSound').play();
                     alert('Game Over!');
                     location.reload();
                 }
@@ -295,6 +316,8 @@
                         bullet.y > spaceship.y - spaceship.size / 2 &&
                         bullet.y < spaceship.y + spaceship.size / 2
                     ) {
+                        // Play explosion sound
+                        document.getElementById('explosionSound').play();
                         alert('Game Over!');
                         location.reload();
                     }
@@ -321,6 +344,8 @@
                     speed: Math.random() * 2 + 2,
                     hoverCount: Math.random() * Math.PI * 2,
                     color: 'rgb(0, 255, 0)',
+                    speedX: Math.random() < 0.5 ? 2 : -2, // Added speedX for horizontal movement
+                    speedY: Math.random() * 2 + 2, // Added speedY for vertical movement
                 });
             }
         }
@@ -396,7 +421,7 @@
         gamepad = undefined;
 
         const gamepads = navigator.getGamepads();
-        for (let i = 0; i < gamepads.length; i++) {
+        for (let i = 0; length; i++) {
             if (gamepads[i] && gamepads[i].buttons[0].pressed) {
                 gamepadIndex = i;
                 gamepad = gamepads[i];
@@ -425,3 +450,4 @@
 
 </body>
 </html>
+
